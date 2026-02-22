@@ -8,7 +8,7 @@ from src.infrastructure.aws.factories import build_dynamodb_resource, build_s3_c
 from src.infrastructure.aws.s3.s3_storage import S3Storage
 from src.infrastructure.aws.sqs.event_parser import parse_sqs_record
 from src.infrastructure.config.settings import Settings, load_settings
-from src.infrastructure.http.mcp_client.httpx_mcp_client import HttpxMcpClient
+from src.infrastructure.http.mcp_client.mock_mcp_client import MockMcpClient
 from src.infrastructure.logging.json_logger import build_logger
 
 
@@ -33,7 +33,12 @@ def _build_container() -> Container:
     s3 = build_s3_client()
     repository = DynamoJobRepository(ddb, settings.ddb_table)
     storage = S3Storage(s3)
-    mcp_client = HttpxMcpClient()
+    if settings.mcp_use_mock:
+        mcp_client = MockMcpClient(mode=settings.mcp_mock_mode)
+    else:
+        from src.infrastructure.http.mcp_client.httpx_mcp_client import HttpxMcpClient
+
+        mcp_client = HttpxMcpClient()
     use_case = ProcessConversionJobUseCase(
         job_repository=repository,
         storage=storage,
