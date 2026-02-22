@@ -102,10 +102,15 @@ class ProcessConversionJobUseCase(ProcessJobUseCase):
                 max_zip_mb=self._max_zip_mb,
             )
 
+            finish_iso = self._clock.now_utc().isoformat()
+            report_json["jobId"] = message.job_id
+            report_json["outputS3Key"] = output_key
+            report_json["startedAt"] = now_iso
+            report_json["finishedAt"] = finish_iso
+
             self._storage.put_bytes(self._output_bucket, output_key, output_zip, "application/zip")
             self._storage.put_json(self._output_bucket, report_key, report_json)
 
-            finish_iso = self._clock.now_utc().isoformat()
             self._job_repository.mark_finished(message.job_id, finish_iso, output_key, report_key)
             logger.info("job_processing_finished", eventType="job_finish", outputS3Key=output_key, reportS3Key=report_key)
             return ProcessResult(success=True, retriable=False)
