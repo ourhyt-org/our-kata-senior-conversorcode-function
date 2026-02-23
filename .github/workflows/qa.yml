@@ -1,0 +1,66 @@
+name: Deploy Lambda (Python)
+
+on:
+  push:
+    branches: [ "qa", "feature/*" ]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  FUNCTION_NAME: kata-convertercode-function
+  PYTHON_VERSION: "3.13"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build deployment package (zip)
+        run: |
+          set -euo pipefail
+          rm -rf build package
+          mkdir -p build package
+
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -t package
+
+          # Copy your source code (Clean Architecture)
+          cp -R src package/src
+
+          # Optional: include README, etc. (not needed for runtime)
+          # cp README.md package/ || true
+
+          cd package
+          zip -r ../build/lambda.zip . -x "*.pyc" "__pycache__/*"
+          cd ..
+
+          ls -lh build/lambda.zip
+
+      - name: Deploy to Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name "${FUNCTION_NAME}" \
+            --zip-file "fileb://build/lambda.zip"
+
+      - name: Wait until Lambda updated
+        run: |
+          aws lambda wait function-updated \
+            --function-name "${FUNCTION_NAME}"
