@@ -7,6 +7,8 @@ class Settings:
     ddb_table: str
     output_bucket: str
     mcp_base_url: str | None
+    mcp_aws_iam_auth: bool
+    mcp_aws_region: str | None
     mcp_use_mock: bool
     mcp_mock_mode: str
     max_files: int
@@ -45,6 +47,8 @@ def load_settings() -> Settings:
         ddb_table=_require_env("DDB_TABLE"),
         output_bucket=_require_env("OUTPUT_BUCKET"),
         mcp_base_url=os.getenv("MCP_BASE_URL"),
+        mcp_aws_iam_auth=_parse_bool(os.getenv("MCP_AWS_IAM_AUTH"), False),
+        mcp_aws_region=os.getenv("MCP_AWS_REGION") or os.getenv("AWS_REGION"),
         mcp_use_mock=_parse_bool(os.getenv("MCP_USE_MOCK"), False),
         mcp_mock_mode=mcp_mock_mode,
         max_files=int(os.getenv("MAX_FILES", "200")),

@@ -17,6 +17,8 @@ This project implements AWS Lambda Function B in Python 3.13 using Clean Archite
 - `DDB_TABLE` (required): DynamoDB table name storing job status.
 - `OUTPUT_BUCKET` (required): S3 bucket where output artifacts are written.
 - `MCP_BASE_URL` (optional): fallback MCP URL if missing from SQS message.
+- `MCP_AWS_IAM_AUTH` (optional, default `false`): when `true`, signs MCP HTTP requests with SigV4 (`service=lambda`), useful for Lambda Function URL with `AWS_IAM`.
+- `MCP_AWS_REGION` (optional): region used for SigV4 signing. Defaults to `AWS_REGION` if present.
 - `MCP_USE_MOCK` (optional, default `false`): when `true`, uses an internal mock MCP client.
 - `MCP_MOCK_MODE` (optional, default `ok`): mock behavior, allowed values `ok`, `warning`, `error`.
 - `MAX_FILES` (optional, default `200`): max number of output files accepted from MCP.

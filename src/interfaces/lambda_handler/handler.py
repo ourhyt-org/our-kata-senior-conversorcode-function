@@ -38,7 +38,10 @@ def _build_container() -> Container:
     else:
         from src.infrastructure.http.mcp_client.httpx_mcp_client import HttpxMcpClient
 
-        mcp_client = HttpxMcpClient()
+        mcp_client = HttpxMcpClient(
+            use_aws_iam_auth=settings.mcp_aws_iam_auth,
+            aws_region=settings.mcp_aws_region,
+        )
     use_case = ProcessConversionJobUseCase(
         job_repository=repository,
         storage=storage,
