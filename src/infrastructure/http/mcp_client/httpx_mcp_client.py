@@ -31,9 +31,8 @@ class HttpxMcpClient(McpClientPort):
             "languageTarget": request.language_target,
             "version": request.version,
             "typeArchitected": request.type_architected,
+            "options": request.options,
         }
-        if tool:
-            payload["tool"] = tool
 
         last_exception: Exception | None = None
         for attempt in range(2):
@@ -47,7 +46,8 @@ class HttpxMcpClient(McpClientPort):
                 if 500 <= response.status_code <= 599:
                     raise TransientError(f"MCP 5xx response: {response.status_code}")
                 if response.status_code >= 400:
-                    raise ValidationError(f"MCP 4xx response: {response.status_code}")
+                    error_body = _extract_error_body(response)
+                    raise ValidationError(f"MCP 4xx response: {response.status_code}; body: {error_body}")
                 data = response.json()
                 normalized = parse_converter_lambda_response(data)
                 return parse_mcp_response(normalized)
@@ -154,3 +154,16 @@ def _normalize_warning(value) -> str:
         if isinstance(message, str):
             return message
     return str(value)
+
+
+def _extract_error_body(response: httpx.Response, max_len: int = 2000) -> str:
+    try:
+        text = response.text
+    except Exception:
+        return "<unavailable>"
+    if not text:
+        return "<empty>"
+    compact = " ".join(text.split())
+    if len(compact) > max_len:
+        return compact[:max_len] + "...<truncated>"
+    return compact

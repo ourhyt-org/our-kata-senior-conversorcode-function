@@ -1,3 +1,5 @@
+import json
+
 import httpx
 import pytest
 
@@ -90,3 +92,46 @@ def test_mcp_client_raises_transient_after_retry_exhausted():
             ),
             code="IDENTIFICATION DIVISION.",
         )
+
+
+def test_mcp_client_sends_strict_contract_payload():
+    captured = {"json": None}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["json"] = request.read().decode("utf-8")
+        return httpx.Response(
+            status_code=200,
+            json={
+                "status": "ok",
+                "summary": "done",
+                "warnings": [],
+                "artifacts": {
+                    "files": [{"path": "main.py", "content": "print('ok')"}],
+                    "report": {"confidence": 1, "assumptions": [], "manualSteps": []},
+                },
+            },
+        )
+
+    client = httpx.Client(transport=httpx.MockTransport(handler), timeout=httpx.Timeout(3.0, read=10.0))
+    mcp = HttpxMcpClient(client=client)
+
+    mcp.convert(
+        base_url="https://mcp.test/convert",
+        tool="convert_code",
+        request=ConversionRequest(
+            language_selected="delphi",
+            language_target="python",
+            version="3.12",
+            type_architected="minimal",
+            options={"includeTests": False},
+        ),
+        code="begin writeln('hello'); end.",
+    )
+
+    assert captured["json"] is not None
+    payload = json.loads(captured["json"])
+    assert payload["languageSelected"] == "delphi"
+    assert payload["languageTarget"] == "python"
+    assert payload["typeArchitected"] == "minimal"
+    assert payload["options"] == {"includeTests": False}
+    assert "tool" not in payload
